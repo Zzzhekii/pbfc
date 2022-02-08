@@ -1,5 +1,4 @@
-# pbfc
-## Python brainfuck compiler
+# Python brainfuck compiler
 ## !!! Linux only !!!
 
 `USAGE: pbfc.py [path_to_source]`
