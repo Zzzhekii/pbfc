@@ -14,3 +14,4 @@ Dependencies:
 
 TODO:
  - User input
+ - Windows support
