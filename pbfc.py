@@ -18,6 +18,7 @@ def iota(new=False):
 OP_ADD = iota(new=True)    # add provided value to the value in a cell
 OP_ACP = iota()            # add provided value to the cell pointer
 OP_OUT = iota()            # output the byte at the cell
+OP_INP = iota()            # save input char to the cell
 OP_LBR = iota()            # left braket
 OP_RBR = iota()            # right braket
 
@@ -74,6 +75,15 @@ def compile(path, tokens):
                 f.write('   mov rdx, 1\n')
                 f.write('   syscall\n')
                 f.write('   pop rcx\n')
+            elif token['op'] == OP_INP:
+                f.write('   push rcx\n')
+                f.write('   mov rax, 0\n')
+                f.write('   mov rdi, 0\n')
+                f.write('   mov rsi, rcx\n')
+                f.write('   mov rdx, 1\n')
+                f.write('   syscall\n')
+                f.write('   pop rcx\n')
+
             else:
                 assert False, "Unknown opcode has been provided to the compiler function. This is a bug."
 
@@ -158,6 +168,10 @@ def parse(source):
         elif source[i] == '.':
             tokens.append({"op": current_word, "value": current_value, "pos": i})
             current_word = OP_OUT
+            current_value = None
+        elif source[i] == ',':
+            tokens.append({"op": current_word, "value": current_value, "pos": i})
+            current_word = OP_INP
             current_value = None
         i += 1
 

@@ -11,5 +11,6 @@ Dependencies:
  - ld
 
 TODO:
- - User input
+ - Char-by-char user input (without hitting enter)
+ - Make less trash while compiling 
  - Windows support
