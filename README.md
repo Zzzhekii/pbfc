@@ -3,9 +3,7 @@
 
 `USAGE: pbfc.py [path_to_source]`
 
-Don't forget to use
-`nasm -felf64 ./out.asm && ld ./out.o`
-to get ./a.out executable 
+pbfc.py should generate `a.out` executable as a result. Don't call important files as `a.out` please.
 
 Dependencies:
  - Python 3

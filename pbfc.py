@@ -182,7 +182,17 @@ if len(sys.argv) != 2:
     exit(1)
 
 source_path = sys.argv[1]
+assembly_path = source_path + '.asm'
+object_path = source_path + '.o'
+exec_path = 'a.out'
 
 source = load_from_file(source_path)
 tokens = parse(source)
-compile("./out.asm", tokens)
+compile(assembly_path, tokens)
+
+import subprocess
+print("INFO: Building x86_64 object file with nasm...")
+subprocess.run(["nasm", "-felf64", assembly_path, "-o", object_path])
+print("INFO: Linking binary with ld...")
+subprocess.run(["ld", object_path, "-o", exec_path])
+
