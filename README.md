@@ -11,3 +11,6 @@ Dependencies:
  - Python 3
  - nasm
  - ld
+
+TODO:
+ - User input
