@@ -210,3 +210,5 @@ subprocess.run(["nasm", "-felf64", assembly_path, "-o", object_path])
 print("INFO: Linking binary with ld...")
 subprocess.run(["ld", object_path, "-o", exec_path])
 
+print("INFO: Cleaning up compilation garbage...")
+subprocess.run(["rm", "-f", object_path, assembly_path])
