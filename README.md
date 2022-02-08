@@ -12,5 +12,4 @@ Dependencies:
 
 TODO:
  - Char-by-char user input (without hitting enter)
- - Make less trash while compiling 
  - Windows support
