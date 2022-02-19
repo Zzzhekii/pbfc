@@ -1,29 +1,21 @@
-#!/bin/python3
+#!/bin/python3.10
 
 # Pyhton Brainf**ck compiler
 # Made by zzheki
 
 TAPE_LENGTH = 800000
 
-# Go-like enumerations
-# Set new=True when you create a new enumeration
-iota_counter = 0
-def iota(new=False):
-    global iota_counter
-    iota_counter += 1
-    if new:
-        iota_counter = 0
-    return iota_counter
+from enum import Enum, auto
+class Op(Enum):
+    ADD = auto() # add provided value to the value in a cell
+    ACP = auto() # add provided value to the cell pointer
+    OUT = auto() # output the byte at the cell
+    INP = auto() # save input char to the cell
+    LBR = auto() # left braket
+    RBR = auto() # right braket
 
-OP_ADD = iota(new=True)    # add provided value to the value in a cell
-OP_ACP = iota()            # add provided value to the cell pointer
-OP_OUT = iota()            # output the byte at the cell
-OP_INP = iota()            # save input char to the cell
-OP_LBR = iota()            # left braket
-OP_RBR = iota()            # right braket
-
-def compile(path, tokens):
-    # !!! IMPORTANT NOTICE:             !!!#
+def compile_linux_x86_64_nasm(path, tokens):
+    # !!!           IMPORTANT           !!!#
     # !!! CELL POINTER IS STORED IN RCX !!!#
 
     with open(path, 'w') as f:
@@ -39,53 +31,51 @@ def compile(path, tokens):
 
         # Compile opcodes
         for token in tokens:
-            if token['op'] == OP_ADD:
-                f.write('   xor rax, rax\n')
-                f.write('   mov ah, [rcx]\n')
-                if token['value'] < 0:
-                    f.write('   sub ah, %d\n' % abs(token['value']))
-                else:
-                    f.write('   add ah, %d\n' % token['value'])
-                f.write('   mov [rcx], ah\n')
-            elif token['op'] == OP_ACP:
-                if token['value'] < 0:
-                    f.write('   sub rcx, %d\n' % abs(token['value']))
-                else:
-                    f.write('   add rcx, %d\n' % token['value'])
-            
-            elif token['op'] == OP_LBR:
-                f.write('   xor rax, rax\n')
-                f.write('   mov ah, [rcx]\n')
-                f.write('   cmp ah, 0\n')
-                f.write('   je br_%d\n' % token['value'])
-                f.write('br_%d:\n' % token['pos'])
-            elif token['op'] == OP_RBR:
-                (my_br_pos, matching_br_pos) = token['value']
-                f.write('   xor rax, rax\n')
-                f.write('   mov ah, [rcx]\n')
-                f.write('   cmp ah, 0\n')
-                f.write('   jne br_%d\n' % matching_br_pos)
-                f.write('br_%d:\n' % my_br_pos)
-            
-            elif token['op'] == OP_OUT:
-                f.write('   push rcx\n')
-                f.write('   mov rax, 1\n')
-                f.write('   mov rdi, 1\n')
-                f.write('   mov rsi, rcx\n')
-                f.write('   mov rdx, 1\n')
-                f.write('   syscall\n')
-                f.write('   pop rcx\n')
-            elif token['op'] == OP_INP:
-                f.write('   push rcx\n')
-                f.write('   mov rax, 0\n')
-                f.write('   mov rdi, 0\n')
-                f.write('   mov rsi, rcx\n')
-                f.write('   mov rdx, 1\n')
-                f.write('   syscall\n')
-                f.write('   pop rcx\n')
+            match token['op']:
+                case Op.ADD:
+                    f.write('   mov ah, [rcx]\n')
+                    if token['value'] < 0:
+                        f.write('   sub ah, %d\n' % abs(token['value']))
+                    else:
+                        f.write('   add ah, %d\n' % token['value'])
+                    f.write('   mov [rcx], ah\n')
+                case Op.ACP:
+                    if token['value'] < 0:
+                        f.write('   sub rcx, %d\n' % abs(token['value']))
+                    else:
+                        f.write('   add rcx, %d\n' % token['value'])
+                
+                case Op.LBR:
+                    f.write('   mov ah, [rcx]\n')
+                    f.write('   cmp ah, 0\n')
+                    f.write('   je br_%d\n' % token['value'])
+                    f.write('br_%d:\n' % token['pos'])
+                case Op.RBR:
+                    (my_br_pos, matching_br_pos) = token['value']
+                    f.write('   mov ah, [rcx]\n')
+                    f.write('   cmp ah, 0\n')
+                    f.write('   jne br_%d\n' % matching_br_pos)
+                    f.write('br_%d:\n' % my_br_pos)
+                
+                case Op.OUT:
+                    f.write('   push rcx\n')
+                    f.write('   mov rax, 1\n')
+                    f.write('   mov rdi, 1\n')
+                    f.write('   mov rsi, rcx\n')
+                    f.write('   mov rdx, 1\n')
+                    f.write('   syscall\n')
+                    f.write('   pop rcx\n')
+                case Op.INP:
+                    f.write('   push rcx\n')
+                    f.write('   mov rax, 0\n')
+                    f.write('   mov rdi, 0\n')
+                    f.write('   mov rsi, rcx\n')
+                    f.write('   mov rdx, 1\n')
+                    f.write('   syscall\n')
+                    f.write('   pop rcx\n')
 
-            else:
-                assert False, "Unknown opcode has been provided to the compiler function. This is a bug."
+                case _:
+                    assert False, "Unknown opcode has been provided to the compiler function. This is a bug."
 
         # Exit linux syscall
         f.write('   mov rax, 60\n')
@@ -110,69 +100,70 @@ def parse(source):
     
     i = 0
     while i < len(source):
-        if source[i] == '+':
-            if current_word != OP_ADD:
+        match source[i]:
+            case '+':
+                if current_word != Op.ADD:
+                    tokens.append({"op": current_word, "value": current_value, "pos": i})
+                    current_word = Op.ADD
+                    current_value = 1
+                else:
+                    current_value += 1
+
+            case '-':
+                if current_word != Op.ADD:
+                    tokens.append({"op": current_word, "value": current_value, "pos": i})
+                    current_word = Op.ADD
+                    current_value = -1
+                else:
+                    current_value -= 1
+
+            case '>':
+                if current_word != Op.ACP:
+                    tokens.append({"op": current_word, "value": current_value, "pos": i})
+                    current_word = Op.ACP
+                    current_value = 1
+                else:
+                    current_value += 1
+
+            case '<':
+                if current_word != Op.ACP:
+                    tokens.append({"op": current_word, "value": current_value, "pos": i})
+                    current_word = Op.ACP
+                    current_value = -1
+                else:
+                    current_value -= 1
+
+            case '[':
                 tokens.append({"op": current_word, "value": current_value, "pos": i})
-                current_word = OP_ADD
-                current_value = 1
-            else:
-                current_value += 1
+                current_word = Op.LBR
+                current_value = None
 
-        elif source[i] == '-':
-            if current_word != OP_ADD:
+                tokens_pos = len(tokens)
+                current_word = "Hey, closing braket, replace me with nessesary information!"
+                left_brakets.append((brakets_counter, tokens_pos))
+                brakets_counter +=1
+
+            case ']':
                 tokens.append({"op": current_word, "value": current_value, "pos": i})
-                current_word = OP_ADD
-                current_value = -1
-            else:
-                current_value -= 1
+                current_word = Op.RBR
+                current_value = None
 
-        elif source[i] == '>':
-            if current_word != OP_ACP:
+                if len(left_brakets) == 0:
+                    assert False, "ERROR: No matching left braket found."
+                (matching_counter, matching_tokens) = left_brakets.pop()
+                tokens[matching_tokens] = {"op": Op.LBR, "value": brakets_counter, "pos": matching_counter}
+                current_word = Op.RBR
+                current_value = (brakets_counter, matching_counter)
+                brakets_counter += 1
+
+            case '.':
                 tokens.append({"op": current_word, "value": current_value, "pos": i})
-                current_word = OP_ACP
-                current_value = 1
-            else:
-                current_value += 1
-
-        elif source[i] == '<':
-            if current_word != OP_ACP:
+                current_word = Op.OUT
+                current_value = None
+            case ',':
                 tokens.append({"op": current_word, "value": current_value, "pos": i})
-                current_word = OP_ACP
-                current_value = -1
-            else:
-                current_value -= 1
-
-        elif source[i] == '[':
-            tokens.append({"op": current_word, "value": current_value, "pos": i})
-            current_word = OP_LBR
-            current_value = None
-
-            tokens_pos = len(tokens)
-            current_word = "Hey, closing braket, replace me with needed information!"
-            left_brakets.append((brakets_counter, tokens_pos))
-            brakets_counter +=1
-
-        elif source[i] == ']':
-            tokens.append({"op": current_word, "value": current_value, "pos": i})
-            current_word = OP_RBR
-            current_value = None
-
-            if len(left_brakets) == 0:
-                assert False, "ERROR: No matching left braket found."
-            (matching_counter, matching_tokens) = left_brakets.pop()
-            tokens[matching_tokens] = {"op": OP_LBR, "value": brakets_counter, "pos": matching_counter}
-            current_word = OP_RBR
-            current_value = (brakets_counter, matching_counter)
-            brakets_counter += 1
-
-        elif source[i] == '.':
-            tokens.append({"op": current_word, "value": current_value, "pos": i})
-            current_word = OP_OUT
-            current_value = None
-        elif source[i] == ',':
-            tokens.append({"op": current_word, "value": current_value, "pos": i})
-            current_word = OP_INP
-            current_value = None
+                current_word = Op.INP
+                current_value = None
         i += 1
 
     if len(left_brakets) != 0:
@@ -202,12 +193,12 @@ exec_path = 'a.out'
 
 source = load_from_file(source_path)
 tokens = parse(source)
-compile(assembly_path, tokens)
+compile_linux_x86_64_nasm(assembly_path, tokens)
 
 import subprocess
-print("INFO: Building x86_64 object file with nasm...")
+print("INFO: Building x86_64 object file using nasm...")
 subprocess.run(["nasm", "-felf64", assembly_path, "-o", object_path])
-print("INFO: Linking binary with ld...")
+print("INFO: Linking binary using ld...")
 subprocess.run(["ld", object_path, "-o", exec_path])
 
 print("INFO: Cleaning up compilation garbage...")
